@@ -1,0 +1,4 @@
+SELECT * FROM T UNION
+SELECT F.Airline, F.Origin, D.Destination, D.Stops+1
+FROM Flight F, Delta D
+WHERE F.Destination = D.Origin AND F.Airline = D.Airline;
