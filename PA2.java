@@ -35,14 +35,7 @@ public class PA2 {
             // Get a Statement object.
             Statement stmt = conn.createStatement();
 
-                //stmt.executeUpdate("DROP TABLE IF EXISTS Student;");
-            // Student table is being created just as an example. You
-            // do not need Student table in PA2
-                //stmt.executeUpdate(
-                    //"CREATE TABLE Student(FirstName, LastName);");
-                //stmt.executeUpdate(
-                    //"INSERT INTO Student VALUES('F1','L1'),('F2','L2');");
-
+            stmt.executeUpdate("DROP TABLE IF EXISTS Connected;");
             stmt.executeUpdate("DROP TABLE IF EXISTS T;");
             stmt.executeUpdate("DROP TABLE IF EXISTS Delta;");
 
@@ -52,41 +45,40 @@ public class PA2 {
                     "SELECT Airline, Origin, Destination, 0 AS Stops FROM Flight;");
 
             ResultSet D = stmt.executeQuery("SELECT * FROM Delta;");
-            ResultSet C = stmt.executeQuery("SELECT COUNT(*) FROM Delta;");
-            System.out.println ("\nCounter: " + C.getString(1));
+            ResultSet C = stmt.executeQuery("SELECT COUNT(*) AS count FROM Delta;");
 
-            //int counter = 0;
+            // System.out.println ("\nCounter: " + C.getString(1));
 
-            while (D.next()) {
+            while (C.getInt("count") != 0) {
+
                 stmt.executeUpdate("DROP TABLE IF EXISTS T_Old;");
                 stmt.executeUpdate("CREATE TABLE T_Old AS SELECT * FROM T;");
+
                 stmt.executeUpdate("DROP TABLE IF EXISTS T;");
                 stmt.executeUpdate("CREATE TABLE T AS SELECT * FROM T_Old UNION" +
                         " SELECT F.Airline, F.Origin, D.Destination, D.Stops+1" +
                         " FROM Flight F, Delta D" +
-                        " WHERE F.Destination = D.Origin AND F.Airline = D.Airline AND F.Origin != D.Destination;");
+                        " WHERE F.Destination = D.Origin AND F.Airline = D.Airline AND F.Origin != D.Destination" +
+                        " AND NOT EXISTS (SELECT * FROM T_Old K WHERE D.Destination = K.Destination AND " +
+                        " F.Origin = K.Origin AND F.Airline = K.Airline);");
+
                 stmt.executeUpdate("DROP TABLE IF EXISTS Delta;");
                 stmt.executeUpdate("CREATE TABLE Delta AS SELECT DISTINCT * FROM T EXCEPT SELECT * FROM T_Old;");
-                D = stmt.executeQuery("SELECT DISTINCT * FROM T EXCEPT SELECT * FROM T_Old;");
 
-                System.out.print(D.getString("Airline"));
-                System.out.print(" | ");
-                System.out.print(D.getString("Origin"));
-                System.out.print(" | ");
-                System.out.print(D.getString("Destination"));
-                System.out.print(" | ");
-                System.out.println(D.getString("Stops"));
+                D = stmt.executeQuery("SELECT * FROM T EXCEPT SELECT * FROM T_Old;");
+                C = stmt.executeQuery("SELECT COUNT(*) AS count FROM (SELECT * FROM T EXCEPT SELECT * FROM T_Old)c;");
+                //System.out.println ("\nCounter: " + C.getInt("count"));
 
-                C = stmt.executeQuery("SELECT COUNT(*) FROM (SELECT * FROM T EXCEPT SELECT * FROM T_Old)c;");
-                System.out.println ("\nCounter: " + C.getString(1));
             }
 
-            System.out.println ("\nCounter: " + C);
-            //ResultSet T = stmt.executeQuery("SELECT DISTINCT * FROM T ORDER BY Origin, Destination;");
-            //Print out table T (Connected)
-            System.out.println ("\nStatement result:");
+            //System.out.println ("\nCounter: " + C);
+            stmt.executeUpdate("CREATE TABLE Connected AS SELECT * FROM T ORDER BY Origin, Destination;");
 
             /*
+            ResultSet T = stmt.executeQuery("SELECT * FROM T ORDER BY Origin, Destination;");
+            Print out table T (Connected)
+            System.out.println ("\nStatement result:");
+
             while (T.next()) {
                 // Get the attribute value.
                 System.out.print(T.getString("Airline"));
@@ -96,10 +88,17 @@ public class PA2 {
                 System.out.print(T.getString("Destination"));
                 System.out.print(" | ");
                 System.out.println(T.getString("Stops"));
-            }*/
+            }
+            */
 
             //T.close();
+
+            stmt.executeUpdate("DROP TABLE IF EXISTS T_Old;");
+            stmt.executeUpdate("DROP TABLE IF EXISTS T;");
+            stmt.executeUpdate("DROP TABLE IF EXISTS Delta;");
+
             D.close();
+            C.close();
             stmt.close();
 
         } catch (Exception e) {
